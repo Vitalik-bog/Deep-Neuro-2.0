@@ -1,0 +1,109 @@
+import torch 
+import torch.nn as nn 
+import numpy as np
+import pandas as pd
+
+
+# Класс нейронной сети
+class NNet(nn.Module):
+    def __init__(self, in_size, hidden_size, out_size):
+        nn.Module.__init__(self)
+        self.layers = nn.Sequential(
+            nn.Linear(in_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, out_size)
+        )
+    
+    def forward(self, X):
+        return self.layers(X)
+
+# Загружаем данные
+df = pd.read_csv('dataset_simple.csv')
+print("Первые 5 строк данных:")
+print(df.head())# Показываем первые 5 строк для проверки
+
+# Подготовка данных
+# Извлекаем признаки (возраст) и преобразуем в нужную форму
+X_raw = df['age'].values.reshape(-1, 1).astype(np.float32)
+# Извлекаем целевую переменную (доход)
+y_raw = df['income'].values.astype(np.float32)
+
+# Нормализация данных
+# Находим min и max для возраста
+X_min, X_max = X_raw.min(), X_raw.max()  
+# Нормализуем возраст в диапазон [0, 1]
+X_normalized = (X_raw - X_min) / (X_max - X_min)
+# Находим min и max для дохода
+y_min, y_max = y_raw.min(), y_raw.max()
+# Нормализуем доход в диапазон [0, 1]
+y_normalized = (y_raw - y_min) / (y_max - y_min)
+
+
+# Преобразуем в тензоры PyTorch
+X = torch.Tensor(X_normalized)
+y = torch.Tensor(y_normalized)
+
+# Параметры сети
+inputSize = X.shape[1]# Количество признаков (1 - возраст)
+hiddenSizes = 10 # Количество нейронов в скрытом слое
+outputSize = 1 # Количество выходов (1 - доход)
+
+# Создаем сеть
+net = NNet(inputSize, hiddenSizes, outputSize)
+
+# Функция потерь и оптимизатор
+lossFn = nn.MSELoss() # Среднеквадратичная ошибка (MSE)
+optimizer = torch.optim.Adam(net.parameters(), lr=0.1) # Оптимизатор Adam
+
+# Обучение
+epochs = 2000
+losses = [] # Список для сохранения ошибок
+
+print("\nНачало обучения:")
+for i in range(epochs):
+    # Прямой проход: получаем предсказания
+    pred = net.forward(X)
+    loss = lossFn(pred.squeeze(), y)
+    losses.append(loss.item())
+    # Обнуляем градиенты (чтобы не накапливались)
+    optimizer.zero_grad()
+
+
+    loss.backward()
+    # Обновляем веса
+    optimizer.step()
+    
+    if i % 200 == 0:
+        print(f'Итерация {i:4d}, Ошибка: {loss.item():.6f}')
+
+# Получаем предсказания
+with torch.no_grad(): # Отключаем вычисление градиентов
+    pred_normalized = net.forward(X) # Получаем предсказания в нормированном виде
+
+# Восстанавливаем данные в исходный масштаб 
+# Переводим предсказания из нормализованных обратно в реальные значения 
+pred_income = (pred_normalized.numpy() * (y_max - y_min) + y_min)
+# Переводим реальные значения в рубли
+y_original = (y.numpy() * (y_max - y_min) + y_min)
+# Переводим возраст обратно в реальные значения
+X_original = X.numpy() * (X_max - X_min) + X_min
+
+# Метрики
+mae = np.mean(np.abs(pred_income.flatten() - y_original))
+print(f'\nСредняя абсолютная ошибка: {mae:.0f} ₽')
+
+
+# Предсказание для новых значений
+# Создаем тестовые возраста
+test_ages = np.array([25, 35, 45, 55, 65]).reshape(-1, 1).astype(np.float32)
+# Нормализуем тестовые возраста
+test_ages_norm = (test_ages - X_min) / (X_max - X_min)
+#Предсказание
+with torch.no_grad():
+    test_pred = (net.forward(torch.Tensor(test_ages_norm)).numpy() * (y_max - y_min) + y_min) 
+
+print("\nПредсказания для разных возрастов:")
+print("Возраст | Доход (₽)")
+print("-" * 20)
+for age, pred in zip(test_ages.flatten(), test_pred.flatten()):
+    print(f"{age:6.0f} | {pred:10.0f} ₽")
