@@ -1,0 +1,79 @@
+# -*- coding: utf-8 -*-
+"""
+Lab 8: Анализ текста с помощью LLM через Ollama
+Использование локальной модели qwen2.5-coder:7b
+"""
+
+import ollama# импорт оламки ллм офлайн
+import os
+
+#1Проверяем наличие файла ENG_article.txt 
+file_path = 'ENG_article.txt'
+if not os.path.exists(file_path):
+    print(f"Файл {file_path} не найден. Создаю тестовый...")
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write("""The vanishing gradient problem was first identified in 1991 by Sepp Hochreiter. The exploding gradient problem was also identified in 1991.
+In 1891, Ernst Schröder developed the method of annihilating derivative (Methode der vernichtenden Ableitung).
+The chain rule of differentiation was proposed by Gottfried Wilhelm Leibniz in 1676.""")
+    print("Файл создан.\n")
+
+with open(file_path, 'r', encoding='utf-8') as f:
+    text = f.read()
+
+print(f"Текст загружен, {len(text)} символов.")
+
+# 2Вопросы
+questions = """
+1. В каком году была обозначена проблема взрывающихся градиентов?
+2. Кто в 1891 году разработал метод уничтожающей производной?
+3. Кто предложил цепное правило дифференцирования и в каком году?
+"""
+
+#3Формируем промпт
+prompt = f"""Ты эксперт по истории математики. Ответь на вопросы, используя ТОЛЬКО информацию из текста. Отвечай кратко и точно на русском языке.
+
+ТЕКСТ:
+{text}
+
+ВОПРОСЫ:
+{questions}
+
+Формат ответа:
+1. [год]
+2. [имя ученого]
+3. [имя ученого] в [год]
+
+Твои ответы:"""
+
+#4Запрос к модели через Ollama
+print("\nОтправка запроса к модели qwen2.5-coder:7b...")
+response = ollama.chat(
+    model="qwen2.5-coder:7b",
+    messages=[{"role": "user", "content": prompt}],
+    options={"temperature": 0.1}
+)
+
+answer = response['message']['content']#забирем ответ модели  из json ответа и выводим на экран
+print("ОТВЕТЫ LLM:")
+print(answer)
+
+# 5Сохраняем промпт и ответы
+with open('prompt_LLM.txt', 'w', encoding='utf-8') as f:
+    f.write("="*60 + "\n")
+    f.write("ПРОМПТ ДЛЯ LLM (Ollama)\n")
+    f.write("="*60 + "\n\n")
+    f.write("ПРОМПТ:\n")
+    f.write("-"*40 + "\n")
+    f.write(prompt + "\n")
+
+with open('answers_LLM.txt', 'w', encoding='utf-8') as f:
+    f.write("="*60 + "\n")
+    f.write("ОТВЕТЫ LLM\n")
+    f.write("="*60 + "\n\n")
+    f.write("ВОПРОСЫ:\n")
+    f.write(questions + "\n")
+    f.write("ОТВЕТЫ:\n")
+    f.write("-"*40 + "\n")
+    f.write(answer + "\n")
+
+print("\nФайлы prompt_LLM.txt и answers_LLM.txt сохранены.")
