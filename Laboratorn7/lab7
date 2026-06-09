@@ -5,7 +5,7 @@ Created on Thu May 20 20:36:26 2021
 @author: AM4
 """
 
-"""BERT Fine-Tuning Sentence Classification
+"""BERT Fine-Tuning Sentence Classificationation
 
 Код базируется на https://colab.research.google.com/drive/1Y4o3jh3ZH70tl6mCd76vz_IxX23biCPP
 
@@ -158,11 +158,11 @@ from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Sequentia
 
 # размер батча придется уменьшить (если на GPU), т.к. за счет
 # увеличившегося словаря выросла и модель 
-batch_size = 4
+batch_size = 4#разбиваем  данные на батчи  по 4 примера
 
 # Пакуем в тренировочный предложения (ID), маску и метки классов
 train_data = TensorDataset(train_inputs, train_masks, train_labels)
-train_sampler = RandomSampler(train_data)
+train_sampler = RandomSampler(train_data)#перемешивем для лучшего обучения
 train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=batch_size)
 
 # и в валидационный
@@ -173,7 +173,7 @@ validation_dataloader = DataLoader(validation_data, sampler=validation_sampler, 
 
 # теперь можно переходить к заданию модели
 
-# ИСПРАВЛЕННЫЙ ИМПОРТ - используем AdamW из torch.optim
+#  - используем AdamW из torch.optim
 from transformers import BertForSequenceClassification, get_linear_schedule_with_warmup
 from torch.optim import AdamW
 
@@ -222,8 +222,6 @@ loss_values = []
 
 # Цикл обучения будет состоять из обучения и валидации
 for epoch_i in range(0, epochs):
-    
-    ################ Часть обучения #####################
     
     print("")
     print('Эпоха {:} из {:} '.format(epoch_i + 1, epochs))
@@ -286,7 +284,7 @@ for epoch_i in range(0, epochs):
     print(" Средний loss: {0:.2f}".format(avg_train_loss))
     print(" Обучение эпохи прошло за: {:}".format(time.strftime("%H:%M:%S", time.gmtime(time.time() - t0))))
         
-    ################ Часть валидации #####################
+    #Часть валидации
     # Позволяет понять правильно ли мы учимся и учимся ли вообще
 
     print("\n Validation...")
