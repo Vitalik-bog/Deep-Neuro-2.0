@@ -1,0 +1,37 @@
+import datetime# для работы с датами
+import ollama
+import re # для регулярных выражений (поиска паттернов в тексте)
+
+def run_agent(user_input):
+    system_prompt = """Ты полезный ассистент. У тебя есть доступ к инструменту get_current_date.
+Когда тебе нужно узнать текущую дату, ты должен вывести ровно:
+TOOL_CALL: get_current_date
+После получения результата инструмента (он будет предоставлен тебе в сообщении, начинающемся с "TOOL_RESULT:"), используй его, чтобы ответить пользователю.
+НЕ выдумывай дату самостоятельно.
+Если инструмент не нужен, просто ответь напрямую.
+"""
+    messages = [
+        {"role": "system", "content": system_prompt},# инструкции
+        {"role": "user", "content": user_input} # вопрос пользователя
+    ]
+    
+    for _ in range(5):  # не более 5 итераций
+        response = ollama.chat(model="qwen2.5-coder:7b", messages=messages)#запрос к llmке
+        reply = response['message']['content']
+        
+        tool_match = re.search(r'TOOL_CALL:\s*(\w+)', reply)#поиск вызова аргумента(точная строка + ноль или более пробелов+захват инструмента)
+        if tool_match:
+            tool_name = tool_match.group(1)#извдекаем вызов инструмента
+            if tool_name == "get_current_date":
+                tool_result = datetime.date.today().isoformat()#Вызов функции
+                messages.append({"role": "assistant", "content": reply})#save
+                messages.append({"role": "user", "content": f"TOOL_RESULT: {tool_result}"})#Добовляем результат
+            else:
+                break
+        else:
+            return reply
+    return "Не удалось получить ответ."
+
+user_query = "Какой сегодня день недели и дата?"
+final_answer = run_agent(user_query)
+print("Ответ агента:", final_answer)
